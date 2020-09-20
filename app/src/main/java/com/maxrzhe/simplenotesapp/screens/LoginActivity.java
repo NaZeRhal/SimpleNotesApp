@@ -1,4 +1,4 @@
-package com.maxrzhe.simplenotesapp;
+package com.maxrzhe.simplenotesapp.screens;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,6 +13,8 @@ import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.IdpResponse;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.maxrzhe.simplenotesapp.R;
+import com.maxrzhe.simplenotesapp.screens.mainscreen.MainActivity;
 
 import java.util.Arrays;
 import java.util.List;

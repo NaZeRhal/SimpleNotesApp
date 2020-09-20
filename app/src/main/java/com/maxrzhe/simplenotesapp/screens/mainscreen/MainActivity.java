@@ -1,8 +1,10 @@
-package com.maxrzhe.simplenotesapp;
+package com.maxrzhe.simplenotesapp.screens.mainscreen;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
@@ -10,21 +12,28 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.GetTokenResult;
+import com.google.firebase.auth.FirebaseUser;
+import com.maxrzhe.simplenotesapp.screens.LoginActivity;
+import com.maxrzhe.simplenotesapp.screens.ProfileActivity;
+import com.maxrzhe.simplenotesapp.R;
+import com.maxrzhe.simplenotesapp.pojo.Note;
+
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements FirebaseAuth.AuthStateListener {
 
     private static final String TAG = "MAIN_LOG";
     private RecyclerView recyclerView;
+    private String currentUserId;
+
+    private MainViewModel mainViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,10 +44,35 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
         setSupportActionBar(toolbar);
 
         recyclerView = findViewById(R.id.rv_main_notes);
+        mainViewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         FloatingActionButton fabEdit = findViewById(R.id.fab_edit);
-        fabEdit.setOnClickListener(v -> Snackbar.make(v, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show());
+        fabEdit.setOnClickListener(v ->
+//                Snackbar.make(v, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                .setAction("Action", null).show()
+//                startActivity(new Intent(this, ExamplesActivity.class))
+                        showAlertDialog()
+        );
+    }
+
+    private void showAlertDialog() {
+        EditText editText = new EditText(this);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Add Note")
+                .setView(editText)
+                .setPositiveButton("Add", (dialog, which) -> {
+                    Log.d(TAG, "showAlertDialog: " + editText.getText());
+                    addNoteToDatabase(editText.getText().toString());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+
+    }
+
+    private void addNoteToDatabase(String text) {
+        Note note = new Note(currentUserId, text, new Timestamp(new Date()), false);
+        mainViewModel.createNote(note);
     }
 
     private void goToLoginActivity() {
@@ -88,14 +122,17 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
 
     @Override
     public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-        if (firebaseAuth.getCurrentUser() == null) {
+        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
+        if (currentUser == null) {
             goToLoginActivity();
-            return;
+//            return;
+        } else {
+            currentUserId = currentUser.getUid();
         }
 
-        firebaseAuth.getCurrentUser().getIdToken(true)
-                .addOnSuccessListener(getTokenResult -> {
-                    Log.d(TAG, "onCreate: token " + getTokenResult.getToken());
-                });
+//        firebaseAuth.getCurrentUser().getIdToken(true)
+//                .addOnSuccessListener(getTokenResult -> {
+//                    Log.d(TAG, "onCreate: token " + getTokenResult.getToken());
+//                });
     }
 }

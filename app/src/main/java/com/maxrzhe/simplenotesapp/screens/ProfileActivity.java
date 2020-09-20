@@ -1,4 +1,4 @@
-package com.maxrzhe.simplenotesapp;
+package com.maxrzhe.simplenotesapp.screens;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 
 import com.google.android.material.textfield.TextInputEditText;
+import com.maxrzhe.simplenotesapp.R;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
