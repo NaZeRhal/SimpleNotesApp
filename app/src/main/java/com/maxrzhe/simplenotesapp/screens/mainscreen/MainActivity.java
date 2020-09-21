@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
@@ -16,10 +16,14 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.maxrzhe.simplenotesapp.adapters.NoteFirestoreRecyclerAdapter;
 import com.maxrzhe.simplenotesapp.screens.LoginActivity;
 import com.maxrzhe.simplenotesapp.screens.ProfileActivity;
 import com.maxrzhe.simplenotesapp.R;
@@ -30,10 +34,11 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity implements FirebaseAuth.AuthStateListener {
 
     private static final String TAG = "MAIN_LOG";
-    private RecyclerView recyclerView;
     private String currentUserId;
 
-    private MainViewModel mainViewModel;
+    private RecyclerView recyclerView;
+    private NoteFirestoreRecyclerAdapter adapter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,13 +49,10 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
         setSupportActionBar(toolbar);
 
         recyclerView = findViewById(R.id.rv_main_notes);
-        mainViewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         FloatingActionButton fabEdit = findViewById(R.id.fab_edit);
         fabEdit.setOnClickListener(v ->
-//                Snackbar.make(v, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                .setAction("Action", null).show()
-//                startActivity(new Intent(this, ExamplesActivity.class))
                         showAlertDialog()
         );
     }
@@ -72,7 +74,14 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
 
     private void addNoteToDatabase(String text) {
         Note note = new Note(currentUserId, text, new Timestamp(new Date()), false);
-        mainViewModel.createNote(note);
+        FirebaseFirestore.getInstance().collection("notes").add(note)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "addNoteToDatabase: note was created successfully");
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                });
+
     }
 
     private void goToLoginActivity() {
@@ -118,6 +127,9 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
     protected void onStop() {
         super.onStop();
         FirebaseAuth.getInstance().removeAuthStateListener(this);
+        if (adapter != null) {
+            adapter.stopListening();
+        }
     }
 
     @Override
@@ -125,14 +137,22 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
         FirebaseUser currentUser = firebaseAuth.getCurrentUser();
         if (currentUser == null) {
             goToLoginActivity();
-//            return;
         } else {
             currentUserId = currentUser.getUid();
+            initRecyclerView(currentUserId);
         }
+    }
 
-//        firebaseAuth.getCurrentUser().getIdToken(true)
-//                .addOnSuccessListener(getTokenResult -> {
-//                    Log.d(TAG, "onCreate: token " + getTokenResult.getToken());
-//                });
+    private void initRecyclerView(String userId) {
+        Query query = FirebaseFirestore.getInstance()
+                .collection("notes")
+                .whereEqualTo("userId", userId);
+        FirestoreRecyclerOptions<Note> options = new FirestoreRecyclerOptions.Builder<Note>()
+                .setQuery(query, Note.class)
+                .build();
+        adapter = new NoteFirestoreRecyclerAdapter(options);
+        recyclerView.setAdapter(adapter);
+
+        adapter.startListening();
     }
 }

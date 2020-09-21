@@ -1,16 +1,20 @@
 package com.maxrzhe.simplenotesapp.data;
 
+import androidx.lifecycle.LiveData;
+
+import java.util.List;
+
 public interface Repository<T> {
 
-    void create(T entity);
+    LiveData<T> create(T entity);
 
-    void read(T entity);
+    LiveData<T> read(T entity);
 
     void update(T entity);
 
     void delete(T entity);
 
-    void readAll();
+    LiveData<List<T>> readAll();
 
-    void readAllInRealTime();
+    LiveData<List<T>> readAllInRealTime(String currentUserId);
 }

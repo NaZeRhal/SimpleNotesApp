@@ -2,42 +2,45 @@ package com.maxrzhe.simplenotesapp.data;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.maxrzhe.simplenotesapp.pojo.Note;
+
+import java.util.List;
 
 public class FirebaseRepository implements Repository<Note> {
 
     private static final String TAG = "FBR_LOG";
-    private FirebaseFirestore firebaseFirestore;
     private CollectionReference collectionRef;
 
 
     public FirebaseRepository() {
-        firebaseFirestore = FirebaseFirestore.getInstance();
+        FirebaseFirestore firebaseFirestore = FirebaseFirestore.getInstance();
         collectionRef = firebaseFirestore.collection("notes");
     }
 
     @Override
-    public void create(Note note) {
+    public LiveData<Note> create(Note note) {
+        MutableLiveData<Note> noteMutableLiveData = new MutableLiveData<>();
         collectionRef.add(note)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Log.d(TAG, "new note created");
+                        noteMutableLiveData.setValue(note);
                     } else {
                         Log.d(TAG, "creation failed -> ", task.getException());
                     }
                 });
+        return noteMutableLiveData;
     }
 
     @Override
-    public void read(Note note) {
-
+    public LiveData<Note> read(Note note) {
+        return null;
     }
 
     @Override
@@ -51,12 +54,43 @@ public class FirebaseRepository implements Repository<Note> {
     }
 
     @Override
-    public void readAll() {
-
+    public LiveData<List<Note>> readAll() {
+        MutableLiveData<List<Note>> noteListMutableLiveData = new MutableLiveData<>();
+        collectionRef.orderBy("created", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {
+                        List<Note> notes = queryDocumentSnapshots.toObjects(Note.class);
+                        noteListMutableLiveData.setValue(notes);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.d(TAG, "readAllDocs: error -> ", e);
+                });
+        return noteListMutableLiveData;
     }
 
     @Override
-    public void readAllInRealTime() {
-
+    public LiveData<List<Note>> readAllInRealTime(String currentUserId) {
+        MutableLiveData<List<Note>> noteListMutableLiveData = new MutableLiveData<>();
+        collectionRef.whereEqualTo("userId", currentUserId).addSnapshotListener((documentSnapshot, error) -> {
+            if (error != null) {
+                Log.d(TAG, "readAllRealTime: error while reading -> ", error);
+                return;
+            }
+            if (documentSnapshot != null && !documentSnapshot.isEmpty()) {
+                List<Note> notes = documentSnapshot.toObjects(Note.class);
+                noteListMutableLiveData.setValue(notes);
+//                List<DocumentChange> documentChanges = documentSnapshot.getDocumentChanges();
+//                Log.d(TAG, "------------------------");
+//                for (DocumentChange documentChange : documentChanges) {
+//                    Note note = documentChange.getDocument().toObject(Note.class);
+//                    Log.d(TAG, "readAllRealTime: note -> " + note);
+//                }
+            } else {
+                Log.d(TAG, "readDoc: query snapshot was null or empty ");
+            }
+        });
+        return noteListMutableLiveData;
     }
 }
