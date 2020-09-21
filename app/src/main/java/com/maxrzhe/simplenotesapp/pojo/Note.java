@@ -50,4 +50,14 @@ public class Note {
     public void setCompleted(boolean completed) {
         isCompleted = completed;
     }
+
+    @Override
+    public String toString() {
+        return "Note{" +
+                "userId='" + userId + '\'' +
+                ", text='" + text + '\'' +
+                ", created=" + created +
+                ", isCompleted=" + isCompleted +
+                '}';
+    }
 }

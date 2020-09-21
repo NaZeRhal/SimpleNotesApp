@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.maxrzhe.simplenotesapp.R;
 import com.maxrzhe.simplenotesapp.pojo.Note;
 
@@ -19,16 +20,18 @@ import com.maxrzhe.simplenotesapp.pojo.Note;
 
 public class NoteFirestoreRecyclerAdapter extends FirestoreRecyclerAdapter<Note, NoteFirestoreRecyclerAdapter.NoteViewHolder> {
 
+    private OnNoteRecyclerListener onNoteRecyclerListener;
 
-    public NoteFirestoreRecyclerAdapter(@NonNull FirestoreRecyclerOptions<Note> options) {
+    public NoteFirestoreRecyclerAdapter(@NonNull FirestoreRecyclerOptions<Note> options, OnNoteRecyclerListener onNoteRecyclerListener) {
         super(options);
+        this.onNoteRecyclerListener = onNoteRecyclerListener;
     }
 
     @Override
     protected void onBindViewHolder(@NonNull NoteViewHolder holder, int position, @NonNull Note note) {
         holder.noteTextView.setText(note.getText());
         holder.completedCheckBox.setChecked(note.getIsCompleted());
-        CharSequence dateCharSequence = DateFormat.format("EEEE, MMM d, yyyy, HH:mm:ss", note.getCreated().toDate());
+        CharSequence dateCharSequence = DateFormat.format("EEEE, d MMM yyyy, HH:mm:ss", note.getCreated().toDate());
         holder.createdTextView.setText(dateCharSequence);
     }
 
@@ -39,17 +42,39 @@ public class NoteFirestoreRecyclerAdapter extends FirestoreRecyclerAdapter<Note,
         return new NoteViewHolder(view);
     }
 
-    static class NoteViewHolder extends RecyclerView.ViewHolder {
+    class NoteViewHolder extends RecyclerView.ViewHolder {
+
         private TextView noteTextView;
         private TextView createdTextView;
         private CheckBox completedCheckBox;
-
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
             noteTextView = itemView.findViewById(R.id.tv_note);
             createdTextView = itemView.findViewById(R.id.tv_created);
             completedCheckBox = itemView.findViewById(R.id.chb_note_check);
+
+
+            completedCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                Note note = getItem(getAdapterPosition());
+                if (onNoteRecyclerListener != null && note.getIsCompleted() != isChecked) {
+                    DocumentSnapshot snapshot = getSnapshots().getSnapshot(getAdapterPosition());
+                    onNoteRecyclerListener.onCheckBoxChanged(isChecked, snapshot);
+                }
+            });
+
+            itemView.setOnClickListener(view -> {
+                if (onNoteRecyclerListener != null) {
+                    DocumentSnapshot snapshot = getSnapshots().getSnapshot(getAdapterPosition());
+                    onNoteRecyclerListener.onItemClickListener(snapshot);
+                }
+            });
         }
+
     }
+    public interface OnNoteRecyclerListener {
+        void onCheckBoxChanged(boolean isChecked, DocumentSnapshot documentSnapshot);
+        void onItemClickListener(DocumentSnapshot snapshot);
+    }
+
 
 }

@@ -1,11 +1,4 @@
-package com.maxrzhe.simplenotesapp.screens.mainscreen;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+package com.maxrzhe.simplenotesapp.screens;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,23 +8,30 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.maxrzhe.simplenotesapp.adapters.NoteFirestoreRecyclerAdapter;
-import com.maxrzhe.simplenotesapp.screens.LoginActivity;
-import com.maxrzhe.simplenotesapp.screens.ProfileActivity;
 import com.maxrzhe.simplenotesapp.R;
+import com.maxrzhe.simplenotesapp.adapters.NoteFirestoreRecyclerAdapter;
 import com.maxrzhe.simplenotesapp.pojo.Note;
 
 import java.util.Date;
 
-public class MainActivity extends AppCompatActivity implements FirebaseAuth.AuthStateListener {
+public class MainActivity extends AppCompatActivity implements FirebaseAuth.AuthStateListener, NoteFirestoreRecyclerAdapter.OnNoteRecyclerListener {
 
     private static final String TAG = "MAIN_LOG";
     private String currentUserId;
@@ -50,10 +50,11 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
 
         recyclerView = findViewById(R.id.rv_main_notes);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
 
         FloatingActionButton fabEdit = findViewById(R.id.fab_edit);
         fabEdit.setOnClickListener(v ->
-                        showAlertDialog()
+                showAlertDialog()
         );
     }
 
@@ -64,8 +65,10 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
                 .setTitle("Add Note")
                 .setView(editText)
                 .setPositiveButton("Add", (dialog, which) -> {
-                    Log.d(TAG, "showAlertDialog: " + editText.getText());
-                    addNoteToDatabase(editText.getText().toString());
+                    String text = editText.getText().toString();
+                    if (!text.isEmpty()) {
+                        addNoteToDatabase(editText.getText().toString());
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -150,9 +153,52 @@ public class MainActivity extends AppCompatActivity implements FirebaseAuth.Auth
         FirestoreRecyclerOptions<Note> options = new FirestoreRecyclerOptions.Builder<Note>()
                 .setQuery(query, Note.class)
                 .build();
-        adapter = new NoteFirestoreRecyclerAdapter(options);
+        adapter = new NoteFirestoreRecyclerAdapter(options, this);
         recyclerView.setAdapter(adapter);
 
         adapter.startListening();
+    }
+
+    @Override
+    public void onCheckBoxChanged(boolean isChecked, DocumentSnapshot documentSnapshot) {
+        documentSnapshot.getReference().update("isCompleted", isChecked)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "onCheckBoxChanged: note was updated");
+                })
+                .addOnFailureListener(e -> {
+                    Log.d(TAG, "onCheckBoxChanged: failed", e);
+                });
+    }
+
+    @Override
+    public void onItemClickListener(DocumentSnapshot snapshot) {
+        Note note = snapshot.toObject(Note.class);
+        EditText editText = new EditText(this);
+        if (note != null) {
+            editText.setText(note.getText());
+            editText.setSelection(note.getText().length());
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Edit Note")
+                .setView(editText)
+                .setPositiveButton("Edit", (dialog, which) -> {
+                    String text = editText.getText().toString();
+                    if (!text.isEmpty() && note != null) {
+                        note.setText(editText.getText().toString());
+                        editNoteInDatabase(note, snapshot);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void editNoteInDatabase(Note note, DocumentSnapshot snapshot) {
+        snapshot.getReference().set(note)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "editNoteInDatabase: note was edited successfully");
+                })
+                .addOnFailureListener(e -> {
+                    Log.d(TAG, "editNoteInDatabase: editing failed -> ", e);
+                });
     }
 }

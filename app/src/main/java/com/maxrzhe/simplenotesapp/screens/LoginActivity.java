@@ -14,7 +14,6 @@ import com.firebase.ui.auth.IdpResponse;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.maxrzhe.simplenotesapp.R;
-import com.maxrzhe.simplenotesapp.screens.mainscreen.MainActivity;
 
 import java.util.Arrays;
 import java.util.List;
