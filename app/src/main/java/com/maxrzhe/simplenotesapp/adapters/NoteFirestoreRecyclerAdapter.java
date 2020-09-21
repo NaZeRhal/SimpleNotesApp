@@ -42,7 +42,7 @@ public class NoteFirestoreRecyclerAdapter extends FirestoreRecyclerAdapter<Note,
         return new NoteViewHolder(view);
     }
 
-    class NoteViewHolder extends RecyclerView.ViewHolder {
+    public class NoteViewHolder extends RecyclerView.ViewHolder {
 
         private TextView noteTextView;
         private TextView createdTextView;
@@ -70,10 +70,16 @@ public class NoteFirestoreRecyclerAdapter extends FirestoreRecyclerAdapter<Note,
             });
         }
 
+        public void deleteItem() {
+            if (onNoteRecyclerListener != null) {
+                onNoteRecyclerListener.onSwipeToDelete(getSnapshots().getSnapshot(getAdapterPosition()));
+            }
+        }
     }
     public interface OnNoteRecyclerListener {
         void onCheckBoxChanged(boolean isChecked, DocumentSnapshot documentSnapshot);
         void onItemClickListener(DocumentSnapshot snapshot);
+        void onSwipeToDelete(DocumentSnapshot snapshot);
     }
 
 
